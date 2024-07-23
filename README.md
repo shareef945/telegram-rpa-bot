@@ -52,3 +52,6 @@ Run the bot with:
 
 ```sh
 python bot.py
+
+```sh
+docker-compose up
