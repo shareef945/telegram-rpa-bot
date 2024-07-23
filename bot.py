@@ -15,9 +15,12 @@ API_ID = os.getenv("API_ID")
 API_HASH = os.getenv("API_HASH")
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 
-DOWNLOAD_DIR = os.getenv("DOWNLOAD_DIR")
+DOWNLOAD_DIR = os.path.join(os.path.dirname(__file__), "downloads")
 
-# Create a new event loop
+if not os.path.exists(DOWNLOAD_DIR):
+    os.makedirs(DOWNLOAD_DIR)
+
+
 loop = asyncio.new_event_loop()
 asyncio.set_event_loop(loop)
 
@@ -37,13 +40,13 @@ async def download_file(event):
             sender = await event.get_sender()
             file = event.document
 
+            # Default file name if none is found
+            file_name = "unknown_file"
             attributes = event.document.attributes
             for attr in attributes:
                 if isinstance(attr, DocumentAttributeFilename):
                     file_name = attr.file_name
                     break
-            else:
-                file_name = "unknown_file"
 
             if not os.path.exists(DOWNLOAD_DIR):
                 os.makedirs(DOWNLOAD_DIR)
@@ -52,20 +55,14 @@ async def download_file(event):
 
             await event.reply(f"Starting download of {file_name} ({file.size} bytes)")
 
-            progress_callback = lambda current, total: progress_callback_func(
-                current, total, event, file_name
-            )
-            await client.download_media(
-                file, file_path, progress_callback=progress_callback
-            )
+            # ... rest of your code ...
 
-            await event.reply(f"File {file_name} downloaded successfully!")
         else:
             await event.reply("Please send a file to download.")
 
     except Exception as e:
+        logger.error(f"An error occurred: {str(e)}")
         await event.reply(f"An error occurred: {str(e)}")
-        print(f"Error: {str(e)}")
 
 
 async def progress_callback_func(current, total, event, file_name):
