@@ -6,5 +6,5 @@ services:
       - API_HASH=${API_HASH}
       - BOT_TOKEN=${BOT_TOKEN}
     volumes:
-      - ./downloads:/app/downloads
+      - /mnt/hdd:/app/downloads
     restart: unless-stopped
