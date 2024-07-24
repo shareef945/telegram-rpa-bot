@@ -39,13 +39,13 @@ rate_limit_queue = Queue()
 MAX_MESSAGES_PER_MINUTE = 20
 
 
-async def rate_limiter():
-    while True:
-        try:
-            message = await asyncio.wait_for(rate_limit_queue.get(), timeout=60)
-            await process_message(message)
-        except TimeoutError:
-            pass  # No messages for 60 seconds, continue waiting
+# async def rate_limiter():
+#     while True:
+#         try:
+#             message = await asyncio.wait_for(rate_limit_queue.get(), timeout=60)
+#             await process_message(message)
+#         except TimeoutError:
+#             pass  # No messages for 60 seconds, continue waiting
 
 
 async def process_message(event):
@@ -128,26 +128,47 @@ async def progress_callback_func(current, total, event, file_name, start_time):
     return current_time
 
 
+def sanitize_name(name):
+    # Replace spaces with hyphens and convert to lowercase
+    return re.sub(r"\s+", "-", name).lower()
+
+
 def get_dynamic_path(file_name):
     # Check if it's a TV show
     tv_match = re.search(r"(.*?)S(\d+)E(\d+)", file_name, re.IGNORECASE)
     if tv_match:
-        show_name = tv_match.group(1).strip().replace(".", " ")
+        show_name = sanitize_name(tv_match.group(1).strip())
         season = int(tv_match.group(2))
         episode = int(tv_match.group(3))
-        extension = os.path.splitext(file_name)[1]
+        extension = os.path.splitext(file_name)[
+            1
+        ].lower()  # Also make file extension lowercase
         return os.path.join(
-            "TV Shows", show_name, f"s{season}", f"E{episode}{extension}"
+            "tv-shows", show_name, f"s{season}", f"e{episode}{extension}"
         )
     else:
         # If not a TV show, assume it's a movie
-        return os.path.join("Movies", file_name)
+        return os.path.join("movies", sanitize_name(file_name))
 
 
 @client.on(events.NewMessage(pattern="/start"))
 async def start(event):
     logger.info(f"Received /start command from user {event.sender_id}")
     await event.reply("I'm ready to download files!")
+
+
+# @client.on(events.NewMessage)
+# async def message_handler(event):
+#     if event.id in recent_messages:
+#         logger.info(f"Skipping duplicate message {event.id}")
+#         return
+
+#     recent_messages.append(event.id)
+
+#     try:
+#         await rate_limit_queue.put(event)
+#     except Exception as e:
+#         logger.error(f"Error queuing message {event.id}: {str(e)}", exc_info=True)
 
 
 @client.on(events.NewMessage)
@@ -159,9 +180,9 @@ async def message_handler(event):
     recent_messages.append(event.id)
 
     try:
-        await rate_limit_queue.put(event)
+        await process_message(event)
     except Exception as e:
-        logger.error(f"Error queuing message {event.id}: {str(e)}", exc_info=True)
+        logger.error(f"Error processing message {event.id}: {str(e)}", exc_info=True)
 
 
 async def main():
@@ -170,7 +191,7 @@ async def main():
     logger.info("Bot is running")
 
     # Start the rate limiter
-    asyncio.create_task(rate_limiter())
+    # asyncio.create_task(rate_limiter())
 
     await client.run_until_disconnected()
 
