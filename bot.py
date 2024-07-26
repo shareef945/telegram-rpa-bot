@@ -9,7 +9,6 @@ from asyncio import Queue, TimeoutError
 import re
 
 last_update_time = 0
-UPDATE_INTERVAL = 120
 
 # Set up logging
 logging.basicConfig(
@@ -76,10 +75,6 @@ async def process_message(event):
 
             logger.info(f"File will be saved to: {full_path}")
 
-            await event.reply(
-                f"Starting download of {file_name} ({file.size} bytes). Please wait."
-            )
-
             start_time = time()
             last_update_time = start_time
             await client.download_media(
@@ -90,9 +85,7 @@ async def process_message(event):
                 ),
             )
             logger.info(f"File {file_name} downloaded successfully to {full_path}")
-            await event.reply(
-                f"File {file_name} downloaded successfully to {relative_path}!"
-            )
+
         else:
             logger.info("Received message without document")
             await event.reply("Please send a file to download.")
@@ -103,29 +96,22 @@ async def process_message(event):
 
 
 async def progress_callback_func(current, total, event, file_name, start_time):
-    global last_update_time
-
     percent = (current / total) * 100
-    elapsed_time = time() - start_time
-    current_time = time()
 
-    # Log progress every 10%
-    if int(percent) % 25 == 0:
+    # Log progress when download starts and completes
+    if current == 0 or current == total:
         logger.info(f"Download progress for {file_name}: {percent:.1f}%")
 
-    # Update user every minute or when download completes
-    if current_time - last_update_time >= UPDATE_INTERVAL or current == total:
+    # Update user when download starts and completes
+    if current == 0:
+        await event.reply(f"Starting download of {file_name}...")
+    elif current == total:
+        elapsed_time = time() - start_time
         minutes = int(elapsed_time // 60)
-        if minutes > 0:
-            await event.reply(
-                f"Downloaded {percent:.1f}% of {file_name} after {minutes} minute(s)"
-            )
-        else:
-            await event.reply(f"Downloaded {percent:.1f}% of {file_name}")
-
-        last_update_time = current_time
-
-    return current_time
+        seconds = int(elapsed_time % 60)
+        await event.reply(
+            f"Download of {file_name} completed in {minutes} minute(s) and {seconds} second(s)."
+        )
 
 
 def sanitize_name(name):
