@@ -65,7 +65,10 @@ async def process_message(event):
                 file_name = "unknown_file"
 
             logger.info(f"Received file: {file_name} ({file.size} bytes)")
-
+            await event.reply(
+                f"Starting download of {file_name} ({file.size} bytes). Please wait."
+            )
+            logger.info(f"Starting download for {file_name}")
             # Get the dynamic path for the file
             relative_path = get_dynamic_path(file_name)
             full_path = os.path.join(DOWNLOAD_DIR, relative_path)
@@ -73,7 +76,7 @@ async def process_message(event):
             # Ensure the directory exists
             os.makedirs(os.path.dirname(full_path), exist_ok=True)
 
-            logger.info(f"File will be saved to: {full_path}")
+            # logger.info(f"File will be saved to: {full_path}")
 
             start_time = time()
             last_update_time = start_time
@@ -84,7 +87,7 @@ async def process_message(event):
                     current, total, event, file_name, start_time
                 ),
             )
-            logger.info(f"File {file_name} downloaded successfully to {full_path}")
+            # logger.info(f"File {file_name} downloaded successfully to {full_path}")
 
         else:
             logger.info("Received message without document")
