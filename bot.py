@@ -137,7 +137,13 @@ def get_dynamic_path(file_name):
         )
     else:
         # If not a TV show, assume it's a movie
-        return os.path.join("movies", sanitize_name(file_name))
+        year_match = re.search(r"\.(\d{4})\.", file_name)
+        if year_match:
+            year = year_match.group(1)
+        else:
+            year = "unknown-year"
+        movie_name = sanitize_name(os.path.splitext(file_name)[0])
+        return os.path.join("movies", year, movie_name)
 
 
 @client.on(events.NewMessage(pattern="/start"))
