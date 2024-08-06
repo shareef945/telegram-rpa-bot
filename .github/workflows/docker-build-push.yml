@@ -3,7 +3,7 @@ name: Build and Push Docker Image
 on:
   push:
     branches:
-      - main 
+      - main
 
 jobs:
   build-and-push:
@@ -33,3 +33,10 @@ jobs:
           push: true
           tags: ${{ secrets.DOCKER_HUB_USERNAME }}/telegram-bot:latest
           platforms: linux/amd64,linux/arm64
+
+
+      - name: Trigger Coolify Redeploy
+        run: |
+          curl -X POST \
+            -H "Authorization: Bearer ${{ secrets.COOLIFY_AUTH_TOKEN }}" \
+            "https://deploy.saitechnology.co/api/v1/deploy?uuid=g040c8o&force=false"
