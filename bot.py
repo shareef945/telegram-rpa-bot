@@ -53,9 +53,9 @@ async def process_message(event):
 
     try:
         # Check if the message is a Coolify deployment notification
-        if (
-            event.message
-            and "New version successfully deployed of" in event.message.text
+        if event.message and (
+            "New version successfully deployed of" in event.message.text
+            or "Coolify: Deployment failed of" in event.message.text
         ):
             logger.info(f"Ignoring Coolify deployment message: {event.message.text}")
             return  # Skip processing for Coolify deployment messages
