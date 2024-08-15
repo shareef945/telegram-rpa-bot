@@ -52,6 +52,14 @@ async def process_message(event):
     logger.info(f"Processing message {event.id} from user {event.sender_id}")
 
     try:
+        # Check if the message is a Coolify deployment notification
+        if (
+            event.message
+            and "New version successfully deployed of" in event.message.text
+        ):
+            logger.info(f"Ignoring Coolify deployment message: {event.message.text}")
+            return  # Skip processing for Coolify deployment messages
+
         if event.document:
             sender = await event.get_sender()
             file = event.document
@@ -76,8 +84,6 @@ async def process_message(event):
             # Ensure the directory exists
             os.makedirs(os.path.dirname(full_path), exist_ok=True)
 
-            # logger.info(f"File will be saved to: {full_path}")
-
             start_time = time()
             last_update_time = start_time
             await client.download_media(
@@ -87,7 +93,6 @@ async def process_message(event):
                     current, total, event, file_name, start_time
                 ),
             )
-            # logger.info(f"File {file_name} downloaded successfully to {full_path}")
 
         else:
             logger.info("Received message without document")
