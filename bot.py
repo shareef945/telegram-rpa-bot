@@ -5,11 +5,8 @@ from telethon import TelegramClient, events
 from telethon.tl.types import DocumentAttributeFilename
 from time import time
 from collections import deque
-from asyncio import Queue, TimeoutError
 import re
 import magic
-
-last_update_time = 0
 
 # Set up logging
 logging.basicConfig(
@@ -34,22 +31,56 @@ client = TelegramClient("bot", API_ID, API_HASH, loop=loop)
 # Message deduplication
 recent_messages = deque(maxlen=100)
 
-# Rate limiting
-rate_limit_queue = Queue()
-MAX_MESSAGES_PER_MINUTE = 20
+
+def sanitize_name(name):
+    # Replace spaces with hyphens and convert to lowercase
+    # Remove any characters that aren't alphanumeric, hyphens, or underscores
+    return re.sub(r"[^\w\-]", "", name.replace(" ", "-")).lower()
 
 
-# async def rate_limiter():
-#     while True:
-#         try:
-#             message = await asyncio.wait_for(rate_limit_queue.get(), timeout=60)
-#             await process_message(message)
-#         except TimeoutError:
-#             pass  # No messages for 60 seconds, continue waiting
+def get_dynamic_path(file_name):
+    name, extension = os.path.splitext(file_name)
+
+    # Check if it's a TV show
+    tv_match = re.search(r"(.*?)S(\d+)E(\d+)", name, re.IGNORECASE)
+    if tv_match:
+        show_name = sanitize_name(tv_match.group(1).strip())
+        season = int(tv_match.group(2))
+        episode = int(tv_match.group(3))
+        return os.path.join(
+            "tv-shows", show_name, f"s{season}", f"e{episode}{extension.lower()}"
+        )
+    else:
+        # If not a TV show, assume it's a movie
+        year_match = re.search(r"\.(\d{4})\.", name)
+        if year_match:
+            year = year_match.group(1)
+        else:
+            year = "unknown-year"
+        movie_name = sanitize_name(name)
+        return os.path.join("movies", year, f"{movie_name}{extension.lower()}")
+
+
+async def progress_callback_func(current, total, event, file_name, start_time):
+    percent = (current / total) * 100
+
+    # Log progress when download starts and completes
+    if current == 0 or current == total:
+        logger.info(f"Download progress for {file_name}: {percent:.1f}%")
+
+    # Update user when download starts and completes
+    if current == 0:
+        await event.reply(f"Starting download of {file_name}...")
+    elif current == total:
+        elapsed_time = time() - start_time
+        minutes = int(elapsed_time // 60)
+        seconds = int(elapsed_time % 60)
+        await event.reply(
+            f"Download of {file_name} completed in {minutes} minute(s) and {seconds} second(s)."
+        )
 
 
 async def process_message(event):
-    global last_update_time
     logger.info(f"Processing message {event.id} from user {event.sender_id}")
 
     try:
@@ -86,7 +117,6 @@ async def process_message(event):
             os.makedirs(os.path.dirname(full_path), exist_ok=True)
 
             start_time = time()
-            last_update_time = start_time
             await client.download_media(
                 file,
                 full_path,
@@ -98,22 +128,10 @@ async def process_message(event):
             # Set correct file permissions after download
             os.chmod(full_path, 0o644)
 
-            # Verify file type and extension
+            # Verify file type
             file_type = magic.from_file(full_path, mime=True)
-            expected_extension = os.path.splitext(file_name)[1].lower()
-            actual_extension = os.path.splitext(full_path)[1].lower()
-
-            if actual_extension != expected_extension or not file_type.startswith(
-                "video/"
-            ):
-                logger.warning(
-                    f"File type mismatch: expected {expected_extension}, got {actual_extension}. MIME type: {file_type}"
-                )
-                # Rename the file to add the correct extension if it's missing
-                if not full_path.lower().endswith(expected_extension):
-                    new_path = full_path + expected_extension
-                    os.rename(full_path, new_path)
-                    logger.info(f"Renamed file to: {new_path}")
+            if not file_type.startswith("video/"):
+                logger.warning(f"File type mismatch. MIME type: {file_type}")
 
         else:
             logger.info("Received message without document")
@@ -124,72 +142,10 @@ async def process_message(event):
         await event.reply(f"An error occurred: {str(e)}")
 
 
-async def progress_callback_func(current, total, event, file_name, start_time):
-    percent = (current / total) * 100
-
-    # Log progress when download starts and completes
-    if current == 0 or current == total:
-        logger.info(f"Download progress for {file_name}: {percent:.1f}%")
-
-    # Update user when download starts and completes
-    if current == 0:
-        await event.reply(f"Starting download of {file_name}...")
-    elif current == total:
-        elapsed_time = time() - start_time
-        minutes = int(elapsed_time // 60)
-        seconds = int(elapsed_time % 60)
-        await event.reply(
-            f"Download of {file_name} completed in {minutes} minute(s) and {seconds} second(s)."
-        )
-
-
-def sanitize_name(name):
-    # Replace spaces with hyphens and convert to lowercase
-    return re.sub(r"\s+", "-", name).lower()
-
-
-def get_dynamic_path(file_name):
-    # Check if it's a TV show
-    tv_match = re.search(r"(.*?)S(\d+)E(\d+)", file_name, re.IGNORECASE)
-    if tv_match:
-        show_name = sanitize_name(tv_match.group(1).strip())
-        season = int(tv_match.group(2))
-        episode = int(tv_match.group(3))
-        extension = os.path.splitext(file_name)[
-            1
-        ].lower()  # Also make file extension lowercase
-        return os.path.join(
-            "tv-shows", show_name, f"s{season}", f"e{episode}{extension}"
-        )
-    else:
-        # If not a TV show, assume it's a movie
-        year_match = re.search(r"\.(\d{4})\.", file_name)
-        if year_match:
-            year = year_match.group(1)
-        else:
-            year = "unknown-year"
-        movie_name = sanitize_name(os.path.splitext(file_name)[0])
-        return os.path.join("movies", year, movie_name)
-
-
 @client.on(events.NewMessage(pattern="/start"))
 async def start(event):
     logger.info(f"Received /start command from user {event.sender_id}")
     await event.reply("I'm ready to download files!")
-
-
-# @client.on(events.NewMessage)
-# async def message_handler(event):
-#     if event.id in recent_messages:
-#         logger.info(f"Skipping duplicate message {event.id}")
-#         return
-
-#     recent_messages.append(event.id)
-
-#     try:
-#         await rate_limit_queue.put(event)
-#     except Exception as e:
-#         logger.error(f"Error queuing message {event.id}: {str(e)}", exc_info=True)
 
 
 @client.on(events.NewMessage)
@@ -210,10 +166,6 @@ async def main():
     logger.info("Starting bot...")
     await client.start(bot_token=BOT_TOKEN)
     logger.info("Bot is running")
-
-    # Start the rate limiter
-    # asyncio.create_task(rate_limiter())
-
     await client.run_until_disconnected()
 
 
