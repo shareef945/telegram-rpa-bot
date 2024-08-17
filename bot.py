@@ -7,6 +7,7 @@ from time import time
 from collections import deque
 from asyncio import Queue, TimeoutError
 import re
+import magic
 
 last_update_time = 0
 
@@ -93,6 +94,26 @@ async def process_message(event):
                     current, total, event, file_name, start_time
                 ),
             )
+
+            # Set correct file permissions after download
+            os.chmod(full_path, 0o644)
+
+            # Verify file type and extension
+            file_type = magic.from_file(full_path, mime=True)
+            expected_extension = os.path.splitext(file_name)[1].lower()
+            actual_extension = os.path.splitext(full_path)[1].lower()
+
+            if actual_extension != expected_extension or not file_type.startswith(
+                "video/"
+            ):
+                logger.warning(
+                    f"File type mismatch: expected {expected_extension}, got {actual_extension}. MIME type: {file_type}"
+                )
+                # Rename the file to add the correct extension if it's missing
+                if not full_path.lower().endswith(expected_extension):
+                    new_path = full_path + expected_extension
+                    os.rename(full_path, new_path)
+                    logger.info(f"Renamed file to: {new_path}")
 
         else:
             logger.info("Received message without document")
