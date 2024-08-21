@@ -1,4 +1,4 @@
-from config import ZOHO_CLIENT_ID, ZOHO_CLIENT_SECRET
+from config import ZOHO_CLIENT_ID, ZOHO_CLIENT_SECRET, ZOHO_ORGANIZATION_ID
 import requests
 import logging
 import json
@@ -13,7 +13,8 @@ class ZohoInvoicing:
         self.redirect_uri = "https://example.com/oauth/callback"
         self.access_token = None
         self.refresh_token = None
-        self.base_url = "https://books.zoho.com/api/v3"
+        self.organization_id = ZOHO_ORGANIZATION_ID
+        self.base_url = "https://www.zohoapis.com/books/v3"
         self.load_tokens()
 
     def generate_auth_url(self):
@@ -27,17 +28,12 @@ class ZohoInvoicing:
         )
 
     def save_tokens(self):
-        logger.info(
-            f"Saving tokens: access_token={self.access_token}, refresh_token={self.refresh_token}"
-        )
+        logger.info(f"Saving tokens..")
+        tokens = {"access_token": self.access_token}
+        if self.refresh_token:
+            tokens["refresh_token"] = self.refresh_token
         with open("zoho_tokens.json", "w") as f:
-            json.dump(
-                {
-                    "access_token": self.access_token,
-                    "refresh_token": self.refresh_token,
-                },
-                f,
-            )
+            json.dump(tokens, f)
 
     def load_tokens(self):
         try:
@@ -69,7 +65,7 @@ class ZohoInvoicing:
         if response.status_code == 200:
             tokens = response.json()
             self.access_token = tokens["access_token"]
-            self.refresh_token = tokens["refresh_token"]
+            self.refresh_token = tokens.get("refresh_token")  # Use get() method
             self.save_tokens()
             return True
         else:
@@ -98,8 +94,14 @@ class ZohoInvoicing:
             return False
 
     async def ensure_valid_token(self):
+        if not self.tokens_available():
+            return False
         if not self.access_token:
-            return await self.refresh_access_token()
+            if not await self.refresh_access_token():
+                return False
+        if not self.organization_id:
+            if not await self.get_organization_id():
+                return False
         return True
 
     async def create_invoice(self, customer_id, items):
@@ -123,19 +125,63 @@ class ZohoInvoicing:
             logger.error(f"Error creating invoice: {str(e)}")
             return None
 
-    async def get_customers(self):
+    async def get_customers(self, **kwargs):
         if not await self.ensure_valid_token():
             return None
 
         try:
-            url = f"{self.base_url}/contacts?contact_type=customer"
+            base_url = f"{self.base_url}/contacts"
+            params = {
+                "organization_id": self.organization_id,
+            }
+
+            valid_params = [
+                "contact_name",
+                "company_name",
+                "first_name",
+                "last_name",
+                "address",
+                "email",
+                "phone",
+                "filter_by",
+                "search_text",
+                "sort_column",
+                "zcrm_contact_id",
+                "zcrm_account_id",
+            ]
+
+            for param in valid_params:
+                if param in kwargs:
+                    params[param] = kwargs[param]
+
+            variant_params = [
+                "contact_name",
+                "company_name",
+                "first_name",
+                "last_name",
+                "address",
+                "email",
+                "phone",
+            ]
+
+            for param in variant_params:
+                if f"{param}_startswith" in kwargs:
+                    params[f"{param}_startswith"] = kwargs[f"{param}_startswith"]
+                if f"{param}_contains" in kwargs:
+                    params[f"{param}_contains"] = kwargs[f"{param}_contains"]
+
             headers = {"Authorization": f"Zoho-oauthtoken {self.access_token}"}
-            response = requests.get(url, headers=headers)
+            response = requests.get(base_url, headers=headers, params=params)
             if response.status_code == 200:
-                return response.json().get("contacts", [])
+                data = response.json()
+                logger.info(f"Successfully fetched {len(data.get('contacts', []))} customers")
+                return data.get("contacts", [])
             else:
                 logger.error(f"Error fetching customers: {response.text}")
                 return None
         except Exception as e:
             logger.error(f"Error fetching customers: {str(e)}")
             return None
+
+    def tokens_available(self):
+        return self.access_token is not None and self.refresh_token is not None

@@ -21,9 +21,16 @@ def register_command_handlers(client):
             full_url = event.message.text.split(maxsplit=1)[1]
             code = full_url.split("code=")[1].split("&")[0]
             if await zoho.get_tokens(code):
-                await event.reply(
-                    "Authorization successful! You can now use Zoho Books commands."
-                )
+                if zoho.refresh_token:
+                    await event.reply(
+                        "Authorization successful! You can now use Zoho Books commands."
+                    )
+                else:
+                    await event.reply(
+                        "Authorization partially successful. No refresh token received. "
+                        "You may need to reauthorize more frequently. "
+                        "You can use Zoho Books commands for now."
+                    )
             else:
                 await event.reply(
                     "Authorization failed. Please try again with /zoho_auth."
@@ -67,10 +74,7 @@ def register_command_handlers(client):
             customers = await zoho.get_customers()
             if customers:
                 customer_list = "\n".join(
-                    [
-                        f"{c['customer_name']} (ID: {c['customer_id']})"
-                        for c in customers[:10]
-                    ]
+                    [f"{c['contact_name']}" for c in customers[:10]]
                 )
                 await event.reply(f"Here are the first 10 customers:\n{customer_list}")
             else:
