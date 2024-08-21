@@ -3,3 +3,4 @@ requests==2.26.0
 telethon
 python-magic
 libmagic
+python-dotenv==1.0.0
