@@ -52,13 +52,8 @@ def get_dynamic_path(file_name):
         )
     else:
         # If not a TV show, assume it's a movie
-        year_match = re.search(r"\.(\d{4})\.", name)
-        if year_match:
-            year = year_match.group(1)
-        else:
-            year = "unknown-year"
         movie_name = sanitize_name(name)
-        return os.path.join("movies", year, f"{movie_name}{extension.lower()}")
+        return os.path.join("movies", f"{movie_name}{extension.lower()}")
 
 
 async def progress_callback_func(current, total, event, file_name, start_time):
