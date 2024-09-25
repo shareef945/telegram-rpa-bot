@@ -10,3 +10,11 @@ DOWNLOAD_DIR = "/app/downloads"
 ZOHO_CLIENT_ID = os.getenv("ZOHO_CLIENT_ID")
 ZOHO_CLIENT_SECRET = os.getenv("ZOHO_CLIENT_SECRET")
 ZOHO_ORGANIZATION_ID = os.getenv("ZOHO_ORGANIZATION_ID")
+USER_ROLES = {
+    int(user_id): role
+    for user_id, role in [
+        user_role.split(":")
+        for user_role in os.getenv("USER_ROLES", "").split(",")
+        if ":" in user_role
+    ]
+}

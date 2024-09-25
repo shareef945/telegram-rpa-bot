@@ -7,10 +7,11 @@ services:
       - BOT_TOKEN=${BOT_TOKEN}
       - ZOHO_CLIENT_ID=${ZOHO_CLIENT_ID}
       - ZOHO_CLIENT_SECRET=${ZOHO_CLIENT_SECRET}
-    # volumes:
-    #   - /mnt/hdd:/app/downloads
+      - ZOHO_ORGANIZATION_ID=${ZOHO_ORGANIZATION_ID}
     volumes:
-    - ./zoho_tokens.json:/app/zoho_tokens.json
+      - ./zoho_tokens.json:/app/zoho_tokens.json
+      - ./src:/app/src
+      #   - /mnt/hdd:/app/downloads
     restart: unless-stopped
     command: >
-      sh -c "touch /app/zoho_tokens.json && python -u src/main.py"
+      sh -c "touch /app/zoho_tokens.json && python -u /app/src/main.py"
