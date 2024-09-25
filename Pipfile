@@ -4,8 +4,6 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-aiohttp = "*"
-aiofiles = "*"
 telethon = "*"
 
 [dev-packages]

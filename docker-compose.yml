@@ -5,6 +5,13 @@ services:
       - API_ID=${API_ID}
       - API_HASH=${API_HASH}
       - BOT_TOKEN=${BOT_TOKEN}
+      - ZOHO_CLIENT_ID=${ZOHO_CLIENT_ID}
+      - ZOHO_CLIENT_SECRET=${ZOHO_CLIENT_SECRET}
+      - ZOHO_ORGANIZATION_ID=${ZOHO_ORGANIZATION_ID}
     volumes:
-      - /mnt/hdd:/app/downloads
+      - ./zoho_tokens.json:/app/zoho_tokens.json
+      - ./src:/app/src
+      #   - /mnt/hdd:/app/downloads
     restart: unless-stopped
+    command: >
+      sh -c "touch /app/zoho_tokens.json && python -u /app/src/main.py"
