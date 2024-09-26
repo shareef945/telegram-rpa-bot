@@ -1,8 +1,4 @@
 COMMANDS = {
-    "start": {
-        "description": "Start the bot and see an overview of its capabilities",
-        "roles": ["guest", "user", "admin"],
-    },
     "help": {
         "description": "Show all available commands",
         "roles": ["guest", "user", "admin"],
@@ -19,7 +15,6 @@ COMMANDS = {
         "description": "List customers from Zoho Books",
         "roles": ["admin"],
     },
-    # Add more commands for your custom APIs and other functionalities
 }
 
 
