@@ -13,11 +13,12 @@ def register_command_handlers(client, plugins):
         user_role = USER_ROLES.get(user_id, "guest")
         commands = get_commands_description(user_role)
         await event.reply(
-            "Welcome! I'm a multi-purpose bot that can help you with various tasks:\n\n"
-            "File Downloads: Send me any file, and I'll download it.\n"
-            "Zoho Books Integration: Create invoices and manage customers.\n"
-            "Custom API Interactions. \n\n"
-            f"Your user ID: {user_id}\nYour role: {user_role}\n\nHere are the commands you can use:\n\n{commands}"
+            "Here are a list of things I can do!\n\n"
+            "• Media Downloads: Send me a Movie, or TV show.\n"
+            "• Zoho Books Integration: Create invoices and manage customers.\n"
+            "• Custom API Interactions.\n\n"
+            f"Your user ID: {user_id}\nYour role: {user_role}\n\n"
+            f"Here are the commands you can use:\n\n{commands}"
         )
 
     @client.on(events.NewMessage(pattern="/zoho_auth"))
