@@ -19,10 +19,6 @@ COMMANDS = {
         "description": "List customers from Zoho Books",
         "roles": ["admin"],
     },
-    "my_role": {
-        "description": "Show your current role",
-        "roles": ["guest", "user", "admin"],
-    },
     # Add more commands for your custom APIs and other functionalities
 }
 

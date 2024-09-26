@@ -36,8 +36,17 @@ class ZohoInvoicing:
             json.dump(tokens, f)
 
     def load_tokens(self):
+        token_file = "zoho_tokens.json"
+        if not os.path.exists(token_file):
+            logger.warning(
+                f"Token file {token_file} not found. Proceeding without tokens."
+            )
+            self.access_token = None
+            self.refresh_token = None
+            return
+
         try:
-            with open("zoho_tokens.json", "r") as f:
+            with open(token_file, "r") as f:
                 tokens = json.load(f)
             self.access_token = tokens.get("access_token")
             self.refresh_token = tokens.get("refresh_token")
@@ -45,10 +54,22 @@ class ZohoInvoicing:
                 logger.info(
                     f"Loaded tokens: access_token={self.access_token}, refresh_token={self.refresh_token}"
                 )
+            elif self.access_token:
+                logger.info(f"Loaded access token: {self.access_token}")
             else:
                 logger.warning("Token file exists but doesn't contain valid tokens.")
-        except (FileNotFoundError, json.JSONDecodeError):
-            logger.warning("Token file not found or empty. Proceeding without tokens.")
+        except FileNotFoundError:
+            logger.warning(
+                f"Token file {token_file} not found. Proceeding without tokens."
+            )
+            self.access_token = None
+            self.refresh_token = None
+        except json.JSONDecodeError:
+            logger.warning("Token file is empty or invalid. Proceeding without tokens.")
+            self.access_token = None
+            self.refresh_token = None
+        except Exception as e:
+            logger.error(f"Unexpected error loading tokens: {str(e)}")
             self.access_token = None
             self.refresh_token = None
 
@@ -95,13 +116,14 @@ class ZohoInvoicing:
 
     async def ensure_valid_token(self):
         if not self.tokens_available():
+            logger.error("No tokens available.")
             return False
         if not self.access_token:
+            logger.info("Access token not available, attempting to refresh.")
             if not await self.refresh_access_token():
+                logger.error("Failed to refresh access token.")
                 return False
-        if not self.organization_id:
-            if not await self.get_organization_id():
-                return False
+        logger.info("Access token is available and valid.")
         return True
 
     async def create_invoice(self, customer_id, items):
@@ -127,6 +149,7 @@ class ZohoInvoicing:
 
     async def get_customers(self, **kwargs):
         if not await self.ensure_valid_token():
+            logger.error("Failed to ensure valid token.")
             return None
 
         try:
@@ -172,9 +195,13 @@ class ZohoInvoicing:
 
             headers = {"Authorization": f"Zoho-oauthtoken {self.access_token}"}
             response = requests.get(base_url, headers=headers, params=params)
+            logging.info(f"API response: {response}")  # Log the raw API response
+
             if response.status_code == 200:
                 data = response.json()
-                logger.info(f"Successfully fetched {len(data.get('contacts', []))} customers")
+                logger.info(
+                    f"Successfully fetched {len(data.get('contacts', []))} customers"
+                )
                 return data.get("contacts", [])
             else:
                 logger.error(f"Error fetching customers: {response.text}")

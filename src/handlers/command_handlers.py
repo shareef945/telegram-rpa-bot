@@ -2,25 +2,23 @@ from telethon import events
 from utils.bot_commands import get_commands_description
 from utils.auth import require_auth
 from config import USER_ROLES
+import logging
 
 
 def register_command_handlers(client, plugins):
-    @client.on(events.NewMessage(pattern="/start"))
-    async def start_command(event):
-        await event.reply(
-            "Welcome! I'm a multi-purpose bot that can help you with various tasks:\n\n"
-            "🔹 File Downloads: Send me any file, and I'll download it.\n"
-            "🔹 Zoho Books Integration: Create invoices and manage customers.\n"
-            "🔹 Custom API Interactions: (Add description of your custom APIs)\n\n"
-            "Use /help to see all available commands."
-        )
 
     @client.on(events.NewMessage(pattern="/help"))
     async def help_command(event):
         user_id = event.sender_id
-        user_role = USER_ROLES.get(str(user_id), "guest")
+        user_role = USER_ROLES.get(user_id, "guest")
         commands = get_commands_description(user_role)
-        await event.reply(f"Here are the commands you can use:\n\n{commands}")
+        await event.reply(
+            "Welcome! I'm a multi-purpose bot that can help you with various tasks:\n\n"
+            "File Downloads: Send me any file, and I'll download it.\n"
+            "Zoho Books Integration: Create invoices and manage customers.\n"
+            "Custom API Interactions. \n\n"
+            f"Your user ID: {user_id}\nYour role: {user_role}\n\nHere are the commands you can use:\n\n{commands}"
+        )
 
     @client.on(events.NewMessage(pattern="/zoho_auth"))
     @require_auth("admin")
@@ -102,6 +100,8 @@ def register_command_handlers(client, plugins):
 
         try:
             customers = await zoho.get_customers()
+            logging.info(f"Fetched customers: {customers}")  # Log the response
+
             if customers:
                 customer_list = "\n".join(
                     [f"{c['contact_name']}" for c in customers[:10]]
@@ -110,6 +110,7 @@ def register_command_handlers(client, plugins):
             else:
                 await event.reply("Failed to fetch customers. Please try again later.")
         except Exception as e:
+            logging.error(f"An error occurred: {str(e)}")  # Log the error
             await event.reply(f"An error occurred: {str(e)}")
 
     @client.on(events.NewMessage(pattern="/my_id"))

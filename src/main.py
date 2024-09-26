@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from telethon import TelegramClient
-from config import API_ID, API_HASH, BOT_TOKEN
+from config import API_ID, API_HASH, BOT_TOKEN, USER_ROLES
 from handlers import register_handlers
 from plugins import load_plugins
 
