@@ -31,7 +31,7 @@ def register_message_handlers(client, plugins):
             await handle_file_download(event, client)
         elif not event.message.text.startswith("/"):
             await event.reply(
-                "Welcome! I'm a multi-purpose bot. Use /start to see what I can do, or /help for a list of commands."
+                "Welcome to SAI Technology's Robotics Process Automation (RPA) service!  type /help to see what i am capable of"
             )
 
     @client.on(events.CallbackQuery(pattern=r"list_commands"))
