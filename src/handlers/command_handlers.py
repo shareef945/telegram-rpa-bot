@@ -14,7 +14,7 @@ def register_command_handlers(client, plugins):
         commands = get_commands_description(user_role)
         await event.reply(
             "Here are a list of things I can do!\n\n"
-            "• Media Downloads: Send me a Movie, or TV show.\n"
+            "• Plex Server Media Download: Send me a movie or tv-show, access it via SAI's Plex server or NAS. \n"
             "• Zoho Books Integration: Create invoices and manage customers.\n"
             "• Custom API Interactions.\n\n"
             f"Your user ID: {user_id}\nYour role: {user_role}\n\n"
