@@ -15,7 +15,7 @@ class GoogleSheetsModule:
         self.creds = None
         self.service = None
         self.credentials_path = "/app/credentials.json"
-        self.redirect_uri = "http://192.168.100.79:8080/oauth2callback"
+        self.redirect_uri = "http://localhost:8080/oauth2callback"
 
     def load_credentials(self):
         if os.path.exists("token.json"):
