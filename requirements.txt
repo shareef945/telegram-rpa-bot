@@ -4,3 +4,7 @@ telethon
 python-magic
 libmagic
 python-dotenv==1.0.0
+google-auth-oauthlib==0.4.6
+google-auth-httplib2==0.1.0
+google-api-python-client==2.47.0
+aiohttp==3.8.1

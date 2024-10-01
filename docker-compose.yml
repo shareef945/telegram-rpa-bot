@@ -12,7 +12,10 @@ services:
     volumes:
       - ./zoho_tokens.json:/app/zoho_tokens.json
       - ./src:/app/src
+      - ./credentials.json:/app/credentials.json
       #   - /mnt/hdd:/app/downloads
+    ports:
+      - "8080:8080"
     restart: unless-stopped
     command: >
       sh -c "touch /app/zoho_tokens.json && python -u /app/src/main.py"
