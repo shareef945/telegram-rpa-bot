@@ -9,6 +9,7 @@ services:
       - ZOHO_CLIENT_SECRET=${ZOHO_CLIENT_SECRET}
       - ZOHO_ORGANIZATION_ID=${ZOHO_ORGANIZATION_ID}
       - USER_ROLES=${USER_ROLES}
+      - ADMIN_CHAT_ID=${ADMIN_CHAT_ID}
     volumes:
       - ./zoho_tokens.json:/app/zoho_tokens.json
       - ./src:/app/src
