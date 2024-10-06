@@ -3,8 +3,9 @@ import logging
 import magic
 from telethon.tl.types import DocumentAttributeFilename
 from config import DOWNLOAD_DIR, ADMIN_CHAT_ID
-from utils.helpers import get_dynamic_path
+from utils.helpers import get_dynamic_path, format_size
 from time import time
+import requests
 
 logger = logging.getLogger(__name__)
 
@@ -40,19 +41,32 @@ async def handle_file_download(event, client):
                 file_name = "unknown_file"
 
             file_size = event.document.size
-            logger.info(f"Received file: {file_name} ({file_size} bytes)")
+            human_readable_size = format_size(file_size)
+            logger.info(f"Received file: {file_name} ({human_readable_size})")
             await event.reply(
-                f"Starting download of {file_name} ({file_size} bytes). Please wait."
+                f"Starting download of {file_name} ({human_readable_size}). Please wait."
             )
 
+            # Send alert to admin chat using Telegram API
             sender = await event.get_sender()
             sender_info = (
                 f"@{sender.username}"
                 if sender.username
                 else f"{sender.first_name} {sender.last_name}"
             )
-            alert_message = f"🚨 File Download Alert 🚨\nUser: {sender_info}\nFile: {file_name}\nSize: {file_size} bytes"
-            await client.send_message(ADMIN_CHAT_ID, alert_message)
+            alert_message = f"🚨 File Download Alert 🚨\nUser: {sender_info}\nFile: {file_name}\nSize: {human_readable_size}"
+
+            try:
+                admin_chat_id = int(ADMIN_CHAT_ID)  # Convert to integer
+                url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+                payload = {"chat_id": admin_chat_id, "text": alert_message}
+                response = requests.post(url, json=payload)
+                if response.status_code != 200:
+                    logger.error(
+                        f"Failed to send alert to admin. Status code: {response.status_code}"
+                    )
+            except Exception as alert_error:
+                logger.error(f"Failed to send alert to admin: {str(alert_error)}")
 
             relative_path = get_dynamic_path(file_name)
             file_path = os.path.join(DOWNLOAD_DIR, relative_path)
