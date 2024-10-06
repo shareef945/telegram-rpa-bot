@@ -2,7 +2,7 @@ import os
 import logging
 import magic
 from telethon.tl.types import DocumentAttributeFilename
-from config import DOWNLOAD_DIR, ADMIN_CHAT_ID
+from config import DOWNLOAD_DIR, ADMIN_CHAT_ID, BOT_TOKEN
 from utils.helpers import get_dynamic_path, format_size
 from time import time
 import requests
