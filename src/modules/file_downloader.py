@@ -2,7 +2,7 @@ import os
 import logging
 import magic
 from telethon.tl.types import DocumentAttributeFilename
-from config import DOWNLOAD_DIR
+from config import DOWNLOAD_DIR, ADMIN_CHAT_ID
 from utils.helpers import get_dynamic_path
 from time import time
 
@@ -44,6 +44,15 @@ async def handle_file_download(event, client):
             await event.reply(
                 f"Starting download of {file_name} ({file_size} bytes). Please wait."
             )
+
+            sender = await event.get_sender()
+            sender_info = (
+                f"@{sender.username}"
+                if sender.username
+                else f"{sender.first_name} {sender.last_name}"
+            )
+            alert_message = f"🚨 File Download Alert 🚨\nUser: {sender_info}\nFile: {file_name}\nSize: {file_size} bytes"
+            await client.send_message(ADMIN_CHAT_ID, alert_message)
 
             relative_path = get_dynamic_path(file_name)
             file_path = os.path.join(DOWNLOAD_DIR, relative_path)
