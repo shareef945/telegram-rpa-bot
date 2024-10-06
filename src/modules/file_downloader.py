@@ -46,27 +46,32 @@ async def handle_file_download(event, client):
             await event.reply(
                 f"Starting download of {file_name} ({human_readable_size}). Please wait."
             )
-
-            # Send alert to admin chat using Telegram API
+            # Get sender information
             sender = await event.get_sender()
-            sender_info = (
-                f"@{sender.username}"
-                if sender.username
-                else f"{sender.first_name} {sender.last_name}"
-            )
-            alert_message = f"🚨 File Download Alert 🚨\nUser: {sender_info}\nFile: {file_name}\nSize: {human_readable_size}"
+            sender_username = sender.username if sender.username else "No username"
 
-            try:
-                admin_chat_id = int(ADMIN_CHAT_ID)  # Convert to integer
-                url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-                payload = {"chat_id": admin_chat_id, "text": alert_message}
-                response = requests.post(url, json=payload)
-                if response.status_code != 200:
-                    logger.error(
-                        f"Failed to send alert to admin. Status code: {response.status_code}"
-                    )
-            except Exception as alert_error:
-                logger.error(f"Failed to send alert to admin: {str(alert_error)}")
+            # Only send alert if the sender is not 'shareef945'
+            if sender_username.lower() != "shareef945":
+                sender_info = (
+                    f"@{sender.username}"
+                    if sender.username
+                    else f"{sender.first_name} {sender.last_name}"
+                )
+                alert_message = f"🚨 File Download Alert 🚨\nUser: {sender_info}\nFile: {file_name}\nSize: {human_readable_size}"
+
+                try:
+                    admin_chat_id = int(ADMIN_CHAT_ID)  # Convert to integer
+                    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+                    payload = {"chat_id": admin_chat_id, "text": alert_message}
+                    response = requests.post(url, json=payload)
+                    if response.status_code != 200:
+                        logger.error(
+                            f"Failed to send alert to admin. Status code: {response.status_code}"
+                        )
+                except Exception as alert_error:
+                    logger.error(f"Failed to send alert to admin: {str(alert_error)}")
+            else:
+                logger.info(f"Download by shareef945, skipping alert.")
 
             relative_path = get_dynamic_path(file_name)
             file_path = os.path.join(DOWNLOAD_DIR, relative_path)
