@@ -23,18 +23,40 @@ def get_dynamic_path(file_name):
         show_name = sanitize_name(tv_match.group(1).strip())
         season = int(tv_match.group(2))
         episode = int(tv_match.group(3))
-        plex_file_name = f"{show_name} - s{season:02d}e{episode:02d}{extension.lower()}"
+
+        # Extract quality if present in square brackets
+        quality_match = re.search(r"\[(.*?)\]", name)
+        quality_suffix = f" [{quality_match.group(1)}]" if quality_match else ""
+
+        plex_file_name = f"{show_name} - s{season:02d}e{episode:02d}{quality_suffix}{extension.lower()}"
+
+        # Check if year is present in show name
+        year_match = re.search(r"(.*?)\((\d{4})\)", show_name)
+        if year_match:
+            show_folder = f"{year_match.group(1).strip()} ({year_match.group(2)})"
+        else:
+            show_folder = show_name
+
         return os.path.join(
-            "tv-shows", show_name, f"Season {season:02d}", plex_file_name
+            "tv-shows", show_folder, f"Season {season:02d}", plex_file_name
         )
     else:
-        # If not a TV show, assume it's a movie
+        # Updated movie handling to match Radarr format
         movie_match = re.search(r"(.*?)(\d{4})", name)
         if movie_match:
             movie_name = sanitize_name(movie_match.group(1).strip())
             year = movie_match.group(2)
-            plex_file_name = f"{movie_name} ({year}){extension.lower()}"
+
+            # Extract quality if present in square brackets
+            quality_match = re.search(r"\[(.*?)\]", name)
+            quality_suffix = f" {quality_match.group(1)}" if quality_match else ""
+
+            plex_file_name = f"{movie_name} ({year}){quality_suffix}{extension.lower()}"
         else:
             movie_name = sanitize_name(name)
-            plex_file_name = f"{movie_name}{extension.lower()}"
+            # Extract quality if present in square brackets
+            quality_match = re.search(r"\[(.*?)\]", name)
+            quality_suffix = f" {quality_match.group(1)}" if quality_match else ""
+            plex_file_name = f"{movie_name}{quality_suffix}{extension.lower()}"
+
         return os.path.join("movies", plex_file_name)
