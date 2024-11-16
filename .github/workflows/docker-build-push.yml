@@ -25,6 +25,10 @@ jobs:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
           password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
 
+      - name: Create service account file
+        run: |
+          echo "${{ secrets.GOOGLE_SERVICE_ACCOUNT }}" > service-account.json
+
       - name: Build and push Docker image
         uses: docker/build-push-action@v2
         with:
