@@ -6,3 +6,5 @@ bot.session
 downloads
 zoho_tokens.json
 credentials.json
+service-account.json
+google-credentials.json

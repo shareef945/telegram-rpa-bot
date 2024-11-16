@@ -11,5 +11,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY src/ ./src/
 COPY credentials.json* .
+COPY service-account.json .
 
 CMD ["python", "-u", "src/main.py"]

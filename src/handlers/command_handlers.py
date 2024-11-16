@@ -168,19 +168,25 @@ def register_command_handlers(client, plugins):
         if not gsheets:
             await event.reply("Google Sheets integration is not available.")
             return
-        if not gsheets.load_credentials():
-            await event.reply("Please authorize the bot first using /gsheets_auth")
-            return
-        workbooks = await gsheets.list_workbooks()
-        if workbooks:
-            workbook_list = "\n".join(
-                [f"{i+1}. {wb['name']}" for i, wb in enumerate(workbooks)]
-            )
-            await event.reply(
-                f"Available workbooks:\n{workbook_list}\n\nUse /select_workbook <number> to choose a workbook."
-            )
-        else:
-            await event.reply("No workbooks found.")
+
+        try:
+            workbooks = await gsheets.list_workbooks()
+            if workbooks:
+                workbook_list = "\n".join(
+                    [f"{i+1}. {wb['name']}" for i, wb in enumerate(workbooks)]
+                )
+                await event.reply(
+                    f"Available workbooks:\n{workbook_list}\n\n"
+                    f"Use /select_workbook <number> to choose a workbook."
+                )
+            else:
+                await event.reply(
+                    "No spreadsheets found. Make sure to:\n"
+                    "1. Share your spreadsheets with the service account email\n"
+                    "2. Wait a few minutes after sharing"
+                )
+        except Exception as e:
+            await event.reply(str(e))
 
     @client.on(events.NewMessage(pattern="/select_workbook"))
     @require_auth("admin")
