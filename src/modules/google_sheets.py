@@ -203,6 +203,24 @@ class GoogleSheetsModule:
             logger.error(f"Unexpected error while listing worksheets: {str(e)}")
             return []
 
+    async def get_headers(self, spreadsheet_id, sheet_name):
+        try:
+            range_name = f"{sheet_name}!1:1"
+            result = (
+                self.service.spreadsheets()
+                .values()
+                .get(spreadsheetId=spreadsheet_id, range=range_name)
+                .execute()
+            )
+
+            headers = result.get("values", [[]])[0]
+            logger.info(f"Retrieved headers: {headers}")
+            return headers
+
+        except Exception as e:
+            logger.error(f"Error getting headers: {str(e)}")
+            return []
+
     async def add_row(self, spreadsheet_id, sheet_name, values):
         try:
             if not self.service:

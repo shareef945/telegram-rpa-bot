@@ -1,9 +1,12 @@
-from telethon import events
+from telethon import events, Button
 from utils.bot_commands import get_commands_description
 from utils.auth import require_auth
 from config import USER_ROLES
 import logging
 import asyncio
+
+logger = logging.getLogger(__name__)
+WORKBOOK_CACHE = {}
 
 
 def register_command_handlers(client, plugins):
@@ -172,13 +175,27 @@ def register_command_handlers(client, plugins):
         try:
             workbooks = await gsheets.list_workbooks()
             if workbooks:
-                workbook_list = "\n".join(
-                    [f"{i+1}. {wb['name']}" for i, wb in enumerate(workbooks)]
-                )
-                await event.reply(
-                    f"Available workbooks:\n{workbook_list}\n\n"
-                    f"Use /select_workbook <number> to choose a workbook."
-                )
+                # Clear previous cache and store new workbook data
+                WORKBOOK_CACHE.clear()
+
+                # Create buttons with shorter callback data
+                buttons = []
+                for index, wb in enumerate(workbooks):
+                    # Store workbook info in cache
+                    cache_key = str(index)
+                    WORKBOOK_CACHE[cache_key] = {"id": wb["id"], "name": wb["name"]}
+
+                    # Create button with just the index as callback data
+                    buttons.append(
+                        [
+                            Button.inline(
+                                f"📊 {wb['name']}",
+                                data=f"wb:{cache_key}",  # Much shorter callback data
+                            )
+                        ]
+                    )
+
+                await event.reply("📑 Select a workbook:", buttons=buttons)
             else:
                 await event.reply(
                     "No spreadsheets found. Make sure to:\n"
@@ -186,51 +203,106 @@ def register_command_handlers(client, plugins):
                     "2. Wait a few minutes after sharing"
                 )
         except Exception as e:
-            await event.reply(str(e))
+            logger.error(f"Error listing workbooks: {str(e)}")
+            await event.reply(f"Error: {str(e)}")
 
-    @client.on(events.NewMessage(pattern="/select_workbook"))
+    @client.on(events.CallbackQuery(pattern=r"wb:(\d+)"))
     @require_auth("admin")
-    async def select_workbook(event):
-        gsheets = plugins.get("google_sheets")
-        if not gsheets:
-            await event.reply("Google Sheets integration is not available.")
-            return
+    async def handle_workbook_selection(event):
         try:
-            workbook_index = int(event.message.text.split()[1]) - 1
-            workbooks = await gsheets.list_workbooks()
-            selected_workbook = workbooks[workbook_index]
-            worksheets = await gsheets.list_worksheets(selected_workbook["id"])
-            worksheet_list = "\n".join(
-                [f"{i+1}. {ws}" for i, ws in enumerate(worksheets)]
-            )
-            await event.reply(
-                f"Selected workbook: {selected_workbook['name']}\n\nAvailable worksheets:\n{worksheet_list}\n\nUse /select_worksheet <number> to choose a worksheet."
-            )
-        except (IndexError, ValueError):
-            await event.reply("Please provide a valid workbook number.")
+            # Extract workbook index from callback data
+            wb_index = event.data.decode().split(":")[1]
+            workbook = WORKBOOK_CACHE.get(wb_index)
 
-    @client.on(events.NewMessage(pattern="/select_worksheet"))
+            if not workbook:
+                await event.edit("Session expired. Please run /list_workbooks again.")
+                return
+
+            gsheets = plugins.get("google_sheets")
+            worksheets = await gsheets.list_worksheets(workbook["id"])
+
+            if worksheets:
+                # Create buttons for worksheets with shorter callback data
+                buttons = [
+                    [
+                        Button.inline(
+                            f"📋 {ws}", data=f"ws:{wb_index}:{i}"  # Short callback data
+                        )
+                    ]
+                    for i, ws in enumerate(worksheets)
+                ]
+
+                # Store worksheet names in cache
+                WORKBOOK_CACHE[wb_index]["worksheets"] = worksheets
+
+                # Add back button
+                buttons.append([Button.inline("🔙 Back", data="back_wb")])
+
+                await event.edit(
+                    f"📊 Workbook: **{workbook['name']}**\n\n" f"Select a worksheet:",
+                    buttons=buttons,
+                    parse_mode="md",
+                )
+            else:
+                await event.edit(
+                    f"No worksheets found in {workbook['name']}",
+                    buttons=[[Button.inline("🔙 Back", data="back_wb")]],
+                )
+        except Exception as e:
+            logger.error(f"Error in workbook selection: {str(e)}")
+            await event.edit(f"An error occurred. Please try again.")
+
+    @client.on(events.CallbackQuery(pattern=r"ws:(\d+):(\d+)"))
     @require_auth("admin")
-    async def select_worksheet(event):
-        gsheets = plugins.get("google_sheets")
-        if not gsheets:
-            await event.reply("Google Sheets integration is not available.")
-            return
+    async def handle_worksheet_selection(event):
         try:
-            worksheet_index = int(event.message.text.split()[1]) - 1
-            workbooks = await gsheets.list_workbooks()
-            selected_workbook = workbooks[0]  # Assuming the first workbook is selected
-            worksheets = await gsheets.list_worksheets(selected_workbook["id"])
-            selected_worksheet = worksheets[worksheet_index]
-            headers = await gsheets.get_headers(
-                selected_workbook["id"], selected_worksheet
+            # Extract data from callback
+            _, wb_index, ws_index = event.data.decode().split(":")
+            workbook = WORKBOOK_CACHE.get(wb_index)
+
+            if not workbook or "worksheets" not in workbook:
+                await event.edit("Session expired. Please run /list_workbooks again.")
+                return
+
+            worksheet_name = workbook["worksheets"][int(ws_index)]
+            gsheets = plugins.get("google_sheets")
+
+            # Get worksheet headers
+            headers = await gsheets.get_headers(workbook["id"], worksheet_name)
+
+            # Store the selection in the module
+            gsheets.current_workbook = workbook["id"]
+            gsheets.current_worksheet = worksheet_name
+
+            # Create back buttons
+            buttons = [
+                [Button.inline("🔙 Back to Worksheets", data=f"wb:{wb_index}")],
+                [Button.inline("🔙 Back to Workbooks", data="back_wb")],
+            ]
+
+            await event.edit(
+                f"✅ Selected:\n"
+                f"📊 Workbook: **{workbook['name']}**\n"
+                f"📋 Worksheet: **{worksheet_name}**\n\n"
+                f"📝 Headers: `{', '.join(headers)}`\n\n"
+                f"Use `/add_row value1, value2, ...` to add data",
+                buttons=buttons,
+                parse_mode="md",
             )
-            header_list = ", ".join(headers)
-            await event.reply(
-                f"Selected worksheet: {selected_worksheet}\n\nHeaders: {header_list}\n\nUse /add_row <value1>,<value2>,... to add a new row."
-            )
-        except (IndexError, ValueError):
-            await event.reply("Please provide a valid worksheet number.")
+        except Exception as e:
+            logger.error(f"Error in worksheet selection: {str(e)}")
+            await event.edit("An error occurred. Please try again.")
+
+    @client.on(events.CallbackQuery(pattern=r"list_workbooks"))
+    @require_auth("admin")
+    async def handle_list_workbooks_callback(event):
+        # Reuse the list_workbooks logic
+        await list_workbooks(event)
+
+    @client.on(events.CallbackQuery(pattern=r"back_wb"))
+    @require_auth("admin")
+    async def handle_back_to_workbooks(event):
+        await list_workbooks(event)
 
     @client.on(events.NewMessage(pattern="/add_row"))
     @require_auth("admin")
@@ -239,23 +311,29 @@ def register_command_handlers(client, plugins):
         if not gsheets:
             await event.reply("Google Sheets integration is not available.")
             return
-        try:
-            values = event.message.text.split(maxsplit=1)[1].split(",")
-            workbooks = await gsheets.list_workbooks()
-            selected_workbook = workbooks[0]  # Assuming the first workbook is selected
-            worksheets = await gsheets.list_worksheets(selected_workbook["id"])
-            selected_worksheet = worksheets[
-                0
-            ]  # Assuming the first worksheet is selected
-            result = await gsheets.add_row(
-                selected_workbook["id"], selected_worksheet, values
-            )
+
+        if not gsheets.current_workbook or not gsheets.current_worksheet:
             await event.reply(
-                f"Row added successfully. Updated range: {result['updates']['updatedRange']}"
+                "No worksheet selected. Please select a worksheet first using /list_workbooks"
+            )
+            return
+
+        try:
+            # Extract values from the message
+            message_text = event.message.text.split(maxsplit=1)[1]
+            values = [v.strip() for v in message_text.split(",")]
+
+            result = await gsheets.add_row(
+                gsheets.current_workbook, gsheets.current_worksheet, values
+            )
+
+            await event.reply(
+                f"✅ Row added successfully to worksheet: {gsheets.current_worksheet}"
             )
         except IndexError:
             await event.reply(
-                "Please provide values for the new row, separated by commas."
+                "Please provide values separated by commas.\n"
+                "Example: `/add_row value1, value2, value3`"
             )
         except Exception as e:
-            await event.reply(f"An error occurred: {str(e)}")
+            await event.reply(f"❌ Error adding row: {str(e)}")
