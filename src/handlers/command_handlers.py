@@ -287,7 +287,8 @@ def register_command_handlers(client, plugins):
                 WORKBOOK_CACHE["temp_product"] = product_id
                 WORKBOOK_CACHE["expecting_amount"] = True
 
-                await event.edit(
+                # Send a new message instead of editing
+                await event.respond(
                     "🧾 Record Payment\n\n"
                     f"Customer: {customer_name}\n"
                     f"Product ID: {product_id}\n"
@@ -295,6 +296,8 @@ def register_command_handlers(client, plugins):
                     "Simply type the payment amount (e.g., 500)\n"
                     "Type 'cancel' to abort the operation."
                 )
+                # Delete the original message with buttons
+                await event.delete()
             else:
                 await event.edit("❌ Product details not found. Please try again.")
 

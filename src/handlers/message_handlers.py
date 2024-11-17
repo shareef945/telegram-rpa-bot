@@ -2,6 +2,7 @@ from telethon import events, Button
 from modules.file_downloader import handle_file_download
 from utils.bot_commands import get_commands_description
 import logging
+from handlers.command_handlers import WORKBOOK_CACHE
 
 logger = logging.getLogger(__name__)
 
@@ -33,11 +34,13 @@ def register_message_handlers(client, plugins):
             return
 
         # Only show welcome message for non-command, non-file, non-reply messages
+        # AND when we're not expecting a payment amount
         if (
             not event.document
             and not event.message.text.startswith("/")
             and not event.message.is_reply
-        ):  # Add this check
+            and not WORKBOOK_CACHE.get("expecting_amount", False)  # Add this condition
+        ):
             await event.reply(
                 "Welcome to SAI Technology's Robotics Process Automation (RPA) service!  type /help to see what i am capable of"
             )
