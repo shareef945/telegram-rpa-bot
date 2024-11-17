@@ -1,6 +1,7 @@
 import asyncio
 import logging
 from telethon import TelegramClient
+from telethon.errors import FloodWaitError
 from config import API_ID, API_HASH, BOT_TOKEN, USER_ROLES
 from handlers import register_handlers
 from plugins import load_plugins
@@ -18,8 +19,20 @@ async def main():
         plugins = load_plugins()
         register_handlers(client, plugins)
 
-        await client.start(bot_token=BOT_TOKEN)
-        logger.info("Bot started successfully")
+        while True:
+            try:
+                await client.start(bot_token=BOT_TOKEN)
+                logger.info("Bot started successfully")
+                break  # Exit the loop if successful
+            except FloodWaitError as e:
+                wait_time = e.seconds
+                logger.warning(
+                    f"Rate limited. Waiting {wait_time} seconds before retrying..."
+                )
+                await asyncio.sleep(wait_time)
+            except Exception as e:
+                logger.error(f"Failed to start bot: {str(e)}")
+                raise
 
         await client.run_until_disconnected()
     except Exception as e:

@@ -3,22 +3,18 @@ COMMANDS = {
         "description": "Show all available commands",
         "roles": ["guest", "user", "admin"],
     },
-    "zoho_auth": {
-        "description": "Authorize the bot to use Zoho Books",
-        "roles": ["admin"],
-    },
-    "create_invoice": {
-        "description": "Create a new invoice in Zoho Books",
-        "roles": ["admin"],
-    },
-    "list_customers": {
-        "description": "List customers from Zoho Books",
-        "roles": ["admin"],
-    },
-    "gsheets_auth": {
-        "description": "Authorize the bot to use Google Sheets",
-        "roles": ["admin"],
-    },
+    # "zoho_auth": {
+    #     "description": "Authorize the bot to use Zoho Books",
+    #     "roles": ["admin"],
+    # },
+    # "create_invoice": {
+    #     "description": "Create a new invoice in Zoho Books",
+    #     "roles": ["admin"],
+    # },
+    # "list_customers": {
+    #     "description": "List customers from Zoho Books",
+    #     "roles": ["admin"],
+    # },
     "list_workbooks": {
         "description": "List available Google Sheets workbooks",
         "roles": ["admin"],
@@ -33,6 +29,10 @@ COMMANDS = {
     },
     "add_row": {
         "description": "Add a new row to the selected worksheet",
+        "roles": ["admin"],
+    },
+    "record_payment": {
+        "description": "Record a new payment received for a product",
         "roles": ["admin"],
     },
 }

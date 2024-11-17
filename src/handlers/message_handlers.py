@@ -22,14 +22,22 @@ def register_message_handlers(client, plugins):
             "Bash Script Notification",
             "Coolify",
             "rp1",
+            "✅ Payment recorded successfully",
         ]
         if any(keyword in event.raw_text for keyword in ignore_keywords):
             logger.info(f"Ignoring message with keyword: {event.message.text[:50]}...")
             return
 
-        if event.document:
-            await handle_file_download(event, client)
-        elif not event.message.text.startswith("/"):
+        # Check if we're expecting a payment amount
+        if hasattr(client, "expecting_payment") and client.expecting_payment():
+            return
+
+        # Only show welcome message for non-command, non-file, non-reply messages
+        if (
+            not event.document
+            and not event.message.text.startswith("/")
+            and not event.message.is_reply
+        ):  # Add this check
             await event.reply(
                 "Welcome to SAI Technology's Robotics Process Automation (RPA) service!  type /help to see what i am capable of"
             )
@@ -39,11 +47,4 @@ def register_message_handlers(client, plugins):
         await event.answer()
         await event.edit(
             "Here are the available commands:\n\n" + get_commands_description()
-        )
-
-    @client.on(events.CallbackQuery(pattern=r"zoho_auth"))
-    async def zoho_auth_callback(event):
-        await event.answer()
-        await event.edit(
-            "Please use the /zoho_auth command to start the authorization process."
         )
